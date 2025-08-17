@@ -18,6 +18,8 @@ contract FuzzSetup {
     address feeSetter;
     address currentSender;
 
+    event PairCreated(address pair);
+
     constructor() public {
         vm.prank(msg.sender);
         counter = new Counter();
@@ -44,12 +46,12 @@ contract FuzzSetup {
         }
     }
 
-    function between(int256 value, int256 low, int256 high) internal pure returns (int256) {
+    function between(uint256 value, uint256 low, uint256 high) internal pure returns (uint256) {
         if (value < low || value > high) {
-            int256 range = high - low + 1;
-            int256 clamped = (value - low) % (range);
+            uint256 range = high - low + 1;
+            uint256 clamped = (value - low) % (range);
             if (clamped < 0) clamped += range;
-            int256 ans = low + clamped;
+            uint256 ans = low + clamped;
             return ans;
         }
         return value;
@@ -57,6 +59,7 @@ contract FuzzSetup {
 
     modifier asCurrentSender() {
         currentSender = counter.incrementCounter();
+        emit PairCreated(address(uniswapV2Pair));
         vm.startPrank(currentSender);
         _;
         vm.stopPrank();

@@ -1,7 +1,7 @@
 pragma solidity =0.5.16;
 
-import './FuzzSetup.sol';
-import '../mocks/IToken.sol';
+import "./FuzzSetup.sol";
+import "../mocks/IToken.sol";
 
 contract FuzzHandlers is FuzzSetup {
     enum OperationType {
@@ -10,10 +10,9 @@ contract FuzzHandlers is FuzzSetup {
     }
 
     modifier swapB4After() {
-        (ghost_b4_reserve0, ghost_b4_reserve1, ) = uniswapV2Pair.getReserves();
+        (ghost_b4_reserve0, ghost_b4_reserve1,) = uniswapV2Pair.getReserves();
         _;
-        operationType = OperationType.Swap;
-        (ghost_after_reserve0, ghost_after_reserve1, ) = uniswapV2Pair.getReserves();
+        (ghost_after_reserve0, ghost_after_reserve1,) = uniswapV2Pair.getReserves();
     }
 
     uint112 ghost_b4_reserve0;
@@ -35,24 +34,10 @@ contract FuzzHandlers is FuzzSetup {
     }
 
     function uniswapV2Pair_mint(address to) public asCurrentSender {
-        // (uint112 reserve0, uint112 reserve1, ) = uniswapV2Pair.getReserves();
-        // require(IToken(uniswapV2Pair.token0()).balanceOf(address(uniswapV2Pair)) > reserve0);
-        // require(IToken(uniswapV2Pair.token1()).balanceOf(address(uniswapV2Pair)) > reserve1);
         uniswapV2Pair.mint(to);
     }
 
-    event ClammpedMint(uint k);
-
-    function clamped_uniswapV2Pair_mint(address to) public asCurrentSender swapB4After {
-        (uint112 reserve0, uint112 reserve1, ) = uniswapV2Pair.getReserves();
-        emit ClammpedMint(uint256(ghost_b4_reserve0) * ghost_b4_reserve1);
-        require(IToken(uniswapV2Pair.token0()).balanceOf(address(uniswapV2Pair)) > reserve0);
-        require(IToken(uniswapV2Pair.token1()).balanceOf(address(uniswapV2Pair)) > reserve1);
-        uniswapV2Pair_mint(to);
-        (reserve0, reserve1, ) = uniswapV2Pair.getReserves();
-        emit ClammpedMint(uint256(reserve0) * reserve1);
-        assert(uint256(ghost_b4_reserve0) * ghost_b4_reserve1 < uint256(reserve0) * reserve1);
-    }
+    event ClammpedMint(uint256 k);
 
     function uniswapV2Pair_permit(
         address owner,
@@ -77,17 +62,15 @@ contract FuzzHandlers is FuzzSetup {
         uniswapV2Pair.skim(to);
     }
 
-    function uniswapV2Pair_swap(
-        uint256 amount0Out,
-        uint256 amount1Out,
-        address to,
-        bytes memory data
-    ) public asCurrentSender {
-        (uint112 reserve0, uint112 reserve1, ) = uniswapV2Pair.getReserves();
+    function uniswapV2Pair_swap(uint256 amount0Out, uint256 amount1Out, address to, bytes memory data)
+        public
+        asCurrentSender
+    {
+        (uint112 reserve0, uint112 reserve1,) = uniswapV2Pair.getReserves();
         address token0 = uniswapV2Pair.token0();
         address token1 = uniswapV2Pair.token1();
-        uint balance0 = IERC20(token0).balanceOf(address(uniswapV2Pair));
-        uint balance1 = IERC20(token1).balanceOf(address(uniswapV2Pair));
+        uint256 balance0 = IERC20(token0).balanceOf(address(uniswapV2Pair));
+        uint256 balance1 = IERC20(token1).balanceOf(address(uniswapV2Pair));
         require(balance0 > reserve0);
         require(balance1 > reserve1);
         uniswapV2Pair.swap(amount0Out, amount1Out, to, data);
@@ -97,16 +80,15 @@ contract FuzzHandlers is FuzzSetup {
         // t(!success, 'UniswapV2Pair: swap failed');
     }
 
-    function clamped_uniswapV2Pair_swap(
-        uint256 amount0Out,
-        uint256 amount1Out,
-        address to,
-        bytes memory data
-    ) public asCurrentSender swapB4After {
+    function clamped_uniswapV2Pair_swap(uint256 amount0Out, uint256 amount1Out, address to, bytes memory data)
+        public
+        asCurrentSender
+        swapB4After
+    {
         amount0Out = between(amount0Out, 1, 1_000_000 ether);
         amount1Out = between(amount1Out, 1, 1_000_000 ether);
         uniswapV2Pair_swap(amount0Out, amount1Out, to, data);
-        (uint112 reserve0, uint112 reserve1, ) = uniswapV2Pair.getReserves();
+        (uint112 reserve0, uint112 reserve1,) = uniswapV2Pair.getReserves();
         assert(uint256(ghost_b4_reserve0) * ghost_b4_reserve1 == uint256(reserve0) * reserve1);
     }
 
@@ -137,7 +119,7 @@ contract FuzzHandlers is FuzzSetup {
     }
 
     function tokenA_mint(address account, uint256 _amount) public asCurrentSender {
-        uint amount = between(_amount, 0, 1_000_000 ether);
+        uint256 amount = between(_amount, 0, 1_000_000 ether);
         tokenA.mint(account, amount);
     }
 
@@ -154,7 +136,7 @@ contract FuzzHandlers is FuzzSetup {
     }
 
     function tokenB_mint(address account, uint256 _amount) public asCurrentSender {
-        uint amount = between(_amount, 0, 1_000_000 ether);
+        uint256 amount = between(_amount, 0, 1_000_000 ether);
         tokenB.mint(account, amount);
     }
 

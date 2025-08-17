@@ -22,7 +22,7 @@
     "predeployedContracts": {},
     "targetContractsBalances": [],
     "constructorArgs": {},
-    "deployerAddress": "0x34567",
+    "deployerAddress": "0x10000",
     "senderAddresses": [
       "0x10000",
       "0x20000",

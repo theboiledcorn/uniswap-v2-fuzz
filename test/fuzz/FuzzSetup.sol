@@ -1,13 +1,14 @@
 pragma solidity =0.5.16;
 
-import "../../contracts/UniswapV2Factory.sol";
-import "../../contracts/UniswapV2Pair.sol";
-import {Vm, IHevm} from "./Hevm.sol";
-import {MockToken} from "../mocks/MockToken.sol";
+import '../../contracts/UniswapV2Factory.sol';
+import '../../contracts/UniswapV2Pair.sol';
+import {Vm, IHevm} from './Hevm.sol';
+import {MockToken} from '../mocks/MockToken.sol';
 
 contract FuzzSetup {
     UniswapV2Factory uniswapV2Factory;
     UniswapV2Pair uniswapV2Pair;
+    Counter counter;
 
     MockToken tokenA;
     MockToken tokenB;
@@ -17,19 +18,21 @@ contract FuzzSetup {
     address feeSetter;
     address currentSender;
 
-    constructor () public {
-        uniswapV2Factory = new UniswapV2Factory(
-            address(this)
-        );
+    constructor() public {
+        vm.prank(msg.sender);
+        counter = new Counter();
+        uniswapV2Factory = new UniswapV2Factory(msg.sender);
 
-        uniswapV2Factory.setFeeToSetter(address(this));
-        uniswapV2Factory.setFeeTo(feeSetter);
+        // // @todo: fee setter is not working, needs to be to get coverage for the burn function
+        // uniswapV2Factory.setFeeToSetter(address(this));
+        vm.prank(msg.sender);
+        uniswapV2Factory.setFeeTo(msg.sender);
 
-        tokenA = new MockToken("TokenA", "TKNa", 18);
-        tokenB = new MockToken("TokenB", "TKNb", 18);
+        tokenA = new MockToken('TokenA', 'TKNa', 18);
+        tokenB = new MockToken('TokenB', 'TKNb', 18);
 
+        vm.prank(msg.sender);
         uniswapV2Pair = UniswapV2Pair(uniswapV2Factory.createPair(address(tokenA), address(tokenB)));
-
     }
 
     event Log(string);
@@ -41,9 +44,31 @@ contract FuzzSetup {
         }
     }
 
-    modifier asCurrentSender {
-        currentSender = msg.sender;
-        vm.prank(address(currentSender));
+    function between(int256 value, int256 low, int256 high) internal pure returns (int256) {
+        if (value < low || value > high) {
+            int256 range = high - low + 1;
+            int256 clamped = (value - low) % (range);
+            if (clamped < 0) clamped += range;
+            int256 ans = low + clamped;
+            return ans;
+        }
+        return value;
+    }
+
+    modifier asCurrentSender() {
+        currentSender = counter.incrementCounter();
+        vm.startPrank(currentSender);
         _;
+        vm.stopPrank();
+        currentSender = address(0);
+    }
+}
+
+contract Counter {
+    uint counter;
+
+    function incrementCounter() external returns (address) {
+        counter++;
+        return address(msg.sender);
     }
 }

@@ -52,11 +52,6 @@ contract FuzzHandlers is FuzzBeforeAfter {
         asCurrentSender
     {
         uniswapV2Pair.swap(amount0Out, amount1Out, to, data);
-        // (bool success,) = address(uniswapV2Pair).call(
-        //     abi.encodeWithSelector(uniswapV2Pair.swap.selector, amount0Out, amount1Out, to, data)
-        // );
-
-        // t(success, "uniswapv2Pair_swap");
     }
 
     function uniswapV2Pair_setFeeToZeroAddress()

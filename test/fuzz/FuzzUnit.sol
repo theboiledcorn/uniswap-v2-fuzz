@@ -5,7 +5,4 @@ import "../mocks/IToken.sol";
 import "../../lib/forge-std/src/console.sol";
 import "../../lib/forge-std/src/console2.sol";
 
-contract FuzzUnit is FuzzProps {
-   
-   
-}
+contract FuzzUnit is FuzzProps {}

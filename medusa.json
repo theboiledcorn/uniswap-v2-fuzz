@@ -100,7 +100,7 @@
   "slither": {
     "useSlither": true,
     "cachePath": "slither_results.json",
-    "args": []
+    "args": ["--foundry-compile-all"]
   },
   "logging": {
     "level": "info",

@@ -24,4 +24,26 @@ contract FuzzProps is FuzzClamped {
             assert((b0 < a0 && b1 > a1) || (b0 > a0 && b1 < a1));
         }
     }
+
+    /**
+     * mint increases K
+     */
+    function prop_uniswapV2Pair_mint_increases_K() public view {
+        if (operationType == OperationType.ADD) {
+            uint256 beforeK = uint256(_before.reserve0) * uint256(_before.reserve1);
+            uint256 afterK = uint256(_after.reserve0) * uint256(_after.reserve1);
+            assert(beforeK < afterK);
+        }
+    }
+    /**
+     * burn decreases K
+     */
+
+    function prop_uniswapV2Pair_burn_decreases_K() public view {
+        if (operationType == OperationType.REMOVE) {
+            uint256 beforeK = uint256(_before.reserve0) * uint256(_before.reserve1);
+            uint256 afterK = uint256(_after.reserve0) * uint256(_after.reserve1);
+            assert(beforeK > afterK);
+        }
+    }
 }

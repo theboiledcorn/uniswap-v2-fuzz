@@ -1,43 +1,27 @@
 pragma solidity =0.5.16;
 
-import "./FuzzSetup.sol";
+import "./FuzzBeforeAfter.sol";
 import "../mocks/IToken.sol";
 
-contract FuzzHandlers is FuzzSetup {
-    enum OperationType {
-        None,
-        Swap
-    }
-
-    modifier swapB4After() {
-        (ghost_b4_reserve0, ghost_b4_reserve1,) = uniswapV2Pair.getReserves();
-        _;
-        (ghost_after_reserve0, ghost_after_reserve1,) = uniswapV2Pair.getReserves();
-    }
-
-    uint112 ghost_b4_reserve0;
-    uint112 ghost_b4_reserve1;
-    uint112 ghost_after_reserve0;
-    uint112 ghost_after_reserve1;
-    OperationType public operationType;
-
-    function uniswapV2Pair_approve(address spender, uint256 value) public asCurrentSender {
+contract FuzzHandlers is FuzzBeforeAfter {
+    function uniswapV2Pair_approve(address spender, uint256 value)
+        public
+        updateGhostsWithOperationType(OperationType.NONE)
+    {
         uniswapV2Pair.approve(spender, value);
     }
 
-    function uniswapV2Pair_burn(address to) public asCurrentSender {
-        require(IToken(uniswapV2Pair.token0()).balanceOf(address(uniswapV2Pair)) > 0);
-        require(IToken(uniswapV2Pair.token1()).balanceOf(address(uniswapV2Pair)) > 0);
-        require(uniswapV2Pair.balanceOf(address(uniswapV2Pair)) > 0);
-        require(to != address(0));
+    function uniswapV2Pair_burn(address to)
+        public
+        updateGhostsWithOperationType(OperationType.REMOVE)
+        asCurrentSender
+    {
         uniswapV2Pair.burn(to);
     }
 
-    function uniswapV2Pair_mint(address to) public asCurrentSender {
+    function uniswapV2Pair_mint(address to) public updateGhostsWithOperationType(OperationType.ADD) asCurrentSender {
         uniswapV2Pair.mint(to);
     }
-
-    event ClammpedMint(uint256 k);
 
     function uniswapV2Pair_permit(
         address owner,
@@ -47,7 +31,7 @@ contract FuzzHandlers is FuzzSetup {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public asCurrentSender {
+    ) public updateGhostsWithOperationType(OperationType.NONE) asCurrentSender {
         /**
          * @todo: for us to be able to get proper coverage on this function,
          * - we'll have to add a valid address in the `senderAddresses` in the medusa.json file
@@ -58,93 +42,122 @@ contract FuzzHandlers is FuzzSetup {
         uniswapV2Pair.permit(owner, spender, value, deadline, v, r, s);
     }
 
-    function uniswapV2Pair_skim(address to) public asCurrentSender {
+    function uniswapV2Pair_skim(address to) public updateGhostsWithOperationType(OperationType.NONE) asCurrentSender {
         uniswapV2Pair.skim(to);
     }
 
     function uniswapV2Pair_swap(uint256 amount0Out, uint256 amount1Out, address to, bytes memory data)
         public
+        updateGhostsWithOperationType(OperationType.SWAP)
         asCurrentSender
     {
-        (uint112 reserve0, uint112 reserve1,) = uniswapV2Pair.getReserves();
-        address token0 = uniswapV2Pair.token0();
-        address token1 = uniswapV2Pair.token1();
-        uint256 balance0 = IERC20(token0).balanceOf(address(uniswapV2Pair));
-        uint256 balance1 = IERC20(token1).balanceOf(address(uniswapV2Pair));
-        require(balance0 > reserve0);
-        require(balance1 > reserve1);
         uniswapV2Pair.swap(amount0Out, amount1Out, to, data);
-        // (bool success, bytes memory data) = address(uniswapV2Pair).call(
-        //     abi.encodeWithSignature('swap(uint256, uint256, address, bytes)', amount0Out, amount1Out, to, bytes(''))
+        // (bool success,) = address(uniswapV2Pair).call(
+        //     abi.encodeWithSelector(uniswapV2Pair.swap.selector, amount0Out, amount1Out, to, data)
         // );
-        // t(!success, 'UniswapV2Pair: swap failed');
+
+        // t(success, "uniswapv2Pair_swap");
     }
 
-    function clamped_uniswapV2Pair_swap(uint256 amount0Out, uint256 amount1Out, address to, bytes memory data)
+    function uniswapV2Pair_setFeeToZeroAddress()
         public
+        updateGhostsWithOperationType(OperationType.NONE)
         asCurrentSender
-        swapB4After
     {
-        amount0Out = between(amount0Out, 1, 1_000_000 ether);
-        amount1Out = between(amount1Out, 1, 1_000_000 ether);
-        uniswapV2Pair_swap(amount0Out, amount1Out, to, data);
-        (uint112 reserve0, uint112 reserve1,) = uniswapV2Pair.getReserves();
-        assert(uint256(ghost_b4_reserve0) * ghost_b4_reserve1 == uint256(reserve0) * reserve1);
-    }
-
-    function uniswapV2Pair_setFeeToZeroAddress() public {
-        vm.prank(address(0x10000));
         uniswapV2Factory.setFeeTo(address(0));
     }
 
-    function uniswapV2Pair_setFeeTo(address feeTo) public {
-        vm.prank(address(0x10000));
+    function uniswapV2Pair_setFeeTo(address feeTo)
+        public
+        updateGhostsWithOperationType(OperationType.NONE)
+        asCurrentSender
+    {
         uniswapV2Factory.setFeeTo(feeTo);
     }
 
-    function uniswapV2Pair_sync() public asCurrentSender {
+    function uniswapV2Pair_sync() public updateGhostsWithOperationType(OperationType.NONE) asCurrentSender {
         uniswapV2Pair.sync();
     }
 
-    function uniswapV2Pair_transfer(address to, uint256 value) public asCurrentSender {
+    function uniswapV2Pair_transfer(address to, uint256 value)
+        public
+        updateGhostsWithOperationType(OperationType.NONE)
+        asCurrentSender
+    {
         uniswapV2Pair.transfer(to, value);
     }
 
-    function uniswapV2Pair_transferFrom(address from, address to, uint256 value) public asCurrentSender {
+    function uniswapV2Pair_transferFrom(address from, address to, uint256 value)
+        public
+        updateGhostsWithOperationType(OperationType.NONE)
+        asCurrentSender
+    {
         uniswapV2Pair.transferFrom(from, to, value);
     }
 
-    function tokenA_approve(address spender, uint256 amount) public asCurrentSender {
+    function tokenA_approve(address spender, uint256 amount)
+        public
+        updateGhostsWithOperationType(OperationType.NONE)
+        asCurrentSender
+    {
         tokenA.approve(spender, amount);
     }
 
-    function tokenA_mint(address account, uint256 _amount) public asCurrentSender {
+    function tokenA_mint(address account, uint256 _amount)
+        public
+        updateGhostsWithOperationType(OperationType.NONE)
+        asCurrentSender
+    {
         uint256 amount = between(_amount, 0, 1_000_000 ether);
         tokenA.mint(account, amount);
     }
 
-    function tokenA_transfer(address recipient, uint256 amount) public asCurrentSender {
+    function tokenA_transfer(address recipient, uint256 amount)
+        public
+        updateGhostsWithOperationType(OperationType.NONE)
+        asCurrentSender
+    {
         tokenA.transfer(recipient, amount);
     }
 
-    function tokenA_transferFrom(address sender, address recipient, uint256 amount) public asCurrentSender {
+    function tokenA_transferFrom(address sender, address recipient, uint256 amount)
+        public
+        updateGhostsWithOperationType(OperationType.NONE)
+        asCurrentSender
+    {
         tokenA.transferFrom(sender, recipient, amount);
     }
 
-    function tokenB_approve(address spender, uint256 amount) public asCurrentSender {
+    function tokenB_approve(address spender, uint256 amount)
+        public
+        updateGhostsWithOperationType(OperationType.NONE)
+        asCurrentSender
+    {
         tokenB.approve(spender, amount);
     }
 
-    function tokenB_mint(address account, uint256 _amount) public asCurrentSender {
+    function tokenB_mint(address account, uint256 _amount)
+        public
+        updateGhostsWithOperationType(OperationType.NONE)
+        asCurrentSender
+    {
         uint256 amount = between(_amount, 0, 1_000_000 ether);
         tokenB.mint(account, amount);
     }
 
-    function tokenB_transfer(address recipient, uint256 amount) public asCurrentSender {
+    function tokenB_transfer(address recipient, uint256 amount)
+        public
+        updateGhostsWithOperationType(OperationType.NONE)
+        asCurrentSender
+    {
         tokenB.transfer(recipient, amount);
     }
 
-    function tokenB_transferFrom(address sender, address recipient, uint256 amount) public asCurrentSender {
+    function tokenB_transferFrom(address sender, address recipient, uint256 amount)
+        public
+        updateGhostsWithOperationType(OperationType.NONE)
+        asCurrentSender
+    {
         tokenB.transferFrom(sender, recipient, amount);
     }
 }

@@ -1,9 +1,9 @@
 pragma solidity =0.5.16;
 
-import '../../contracts/UniswapV2Factory.sol';
-import '../../contracts/UniswapV2Pair.sol';
-import {Vm, IHevm} from './Hevm.sol';
-import {MockToken} from '../mocks/MockToken.sol';
+import "../../contracts/UniswapV2Factory.sol";
+import "../../contracts/UniswapV2Pair.sol";
+import {Vm, IHevm} from "./Hevm.sol";
+import {MockToken} from "../mocks/MockToken.sol";
 
 contract FuzzSetup {
     UniswapV2Factory uniswapV2Factory;
@@ -23,17 +23,15 @@ contract FuzzSetup {
     constructor() public {
         vm.prank(msg.sender);
         counter = new Counter();
-        uniswapV2Factory = new UniswapV2Factory(msg.sender);
+        uniswapV2Factory = new UniswapV2Factory(address(this));
 
-        // // @todo: fee setter is not working, needs to be to get coverage for the burn function
         // uniswapV2Factory.setFeeToSetter(address(this));
-        vm.prank(msg.sender);
-        uniswapV2Factory.setFeeTo(msg.sender);
+        uniswapV2Factory.setFeeTo(address(this));
 
-        tokenA = new MockToken('TokenA', 'TKNa', 18);
-        tokenB = new MockToken('TokenB', 'TKNb', 18);
+        tokenA = new MockToken("TokenA", "TKNa", 18);
+        tokenB = new MockToken("TokenB", "TKNb", 18);
 
-        vm.prank(msg.sender);
+        // vm.prank(msg.sender);
         uniswapV2Pair = UniswapV2Pair(uniswapV2Factory.createPair(address(tokenA), address(tokenB)));
     }
 
@@ -59,8 +57,16 @@ contract FuzzSetup {
 
     modifier asCurrentSender() {
         currentSender = counter.incrementCounter();
+        if (tokenA.balanceOf(currentSender) < (2 ** 31)) {
+            tokenA.mint(currentSender, (2 ** 127));
+        }
+        if (tokenB.balanceOf(currentSender) < (2 ** 31)) {
+            tokenB.mint(currentSender, (2 ** 127));
+        }
         emit PairCreated(address(uniswapV2Pair));
         vm.startPrank(currentSender);
+        tokenA.approve(address(uniswapV2Pair), (2 ** 255));
+        tokenB.approve(address(uniswapV2Pair), (2 ** 255));
         _;
         vm.stopPrank();
         currentSender = address(0);
@@ -68,7 +74,7 @@ contract FuzzSetup {
 }
 
 contract Counter {
-    uint counter;
+    uint256 counter;
 
     function incrementCounter() external returns (address) {
         counter++;

@@ -3,6 +3,7 @@ build/
 # echidna.yaml
 out/
 corpus/
+medusa/
 echidna/
 cache/
 .idea
